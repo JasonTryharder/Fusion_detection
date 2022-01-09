@@ -125,6 +125,9 @@ def load_configs(model_name='fpn_resnet', configs=None):
 
     # add model-dependent parameters
     configs = load_configs_model(model_name, configs)
+    
+    # add model performance evaluation parameters 
+    configs.min_iou = 0.5
 
     # visualization parameters
     configs.output_width = 608 # width of result image (height may vary)
@@ -198,7 +201,7 @@ def detect_objects(input_bev_maps, model, configs):
                 for obj in detection:
                     x, y, w, l, im, re, _, _, _ = obj
                     yaw = np.arctan2(im, re)
-                    detections.append([1, x, y, 0.0, 1.50, w, l, yaw])    
+                    detections.append([[1, x, y, 0.0, 1.50, w, l, yaw]])    
 
         elif 'fpn_resnet' in configs.arch:
             # decode output and perform post-processing
@@ -228,12 +231,29 @@ def detect_objects(input_bev_maps, model, configs):
     objects = [] 
 
     ## step 1 : check whether there are any detections
-
+    detection = detections[0] if 'fpn_resnet' in configs.arch else detections 
+    print(type(detections),type(detection) ,len(detection))
+    
+    for i in range(len(detection)):
+        if len(detection[i]) > 0:
+    # if detections
         ## step 2 : loop over all detections
-        
+            for obj in detection[i]:
+                _score, _x, _y, _z, _h, _w, _l, _yaw = obj
+                yaw = -1*_yaw
+                # detections.append([1, x, y, 0.0, 1.50, w, l, yaw])
+                # print(len(detection[i]))
             ## step 3 : perform the conversion using the limits for x, y and z set in the configs structure
-        
+                x_factor = (configs.lim_x[1] - configs.lim_x[0])/configs.bev_width
+                y_factor = (configs.lim_y[1] - configs.lim_y[0])/configs.bev_height
+                z_factor = (configs.lim_z[1] - configs.lim_z[0])
+                x = _y * x_factor + configs.lim_x[0]
+                y = _x * y_factor + configs.lim_y[0]
+                z = _z + configs.lim_z[0]
+                w = _w * y_factor
+                l = _l * x_factor
             ## step 4 : append the current object to the 'objects' array
+                objects.append([1, x, y, z, _h, w, l, yaw])
         
     #######
     ####### ID_S3_EX2 START #######   

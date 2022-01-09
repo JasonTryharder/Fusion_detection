@@ -11,6 +11,7 @@
 #
 
 # general package imports
+from math import sqrt
 import numpy as np
 import matplotlib
 matplotlib.use('wxagg') # change backend so that figure maximizing works on Mac as well     
@@ -36,30 +37,50 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
     
      # find best detection for each valid label 
     true_positives = 0 # no. of correctly detected objects
+    all_positives = 0
+    false_negatives = 0
+    false_positives = len(detections)
     center_devs = []
     ious = []
     for label, valid in zip(labels, labels_valid):
         matches_lab_det = []
         if valid: # exclude all labels from statistics which are not considered valid
-            
+            all_positives+=1
+            false_negatives+=1
+            print(type(valid), type(label), label)
+            print(label.box.center_x)
             # compute intersection over union (iou) and distance between centers
 
             ####### ID_S4_EX1 START #######     
             #######
             print("student task ID_S4_EX1 ")
-
+            print(detections)
             ## step 1 : extract the four corners of the current label bounding-box
-            
+            label_fl,label_rl,label_rr,label_fr = tools.compute_box_corners(label.box.center_x,label.box.center_y,label.box.width,label.box.length,label.box.heading)
+            label_obj_corners= tools.compute_box_corners(label.box.center_x,label.box.center_y,label.box.width,label.box.length,label.box.heading)
+            label_obj_poly = Polygon(label_obj_corners) 
             ## step 2 : loop over all detected objects
-
+            for detection in detections:
+                
+                
+                print(len(detection))
                 ## step 3 : extract the four corners of the current detection
-                
+                # det_fl,det_rl,det_rr,det_fr = tools.compute_box_corners(detection[1],detection[2],detection[5],detection[6],detection[7])
+                det_obj_corners = tools.compute_box_corners(detection[1],detection[2],detection[5],detection[6],detection[7])
+                det_poly = Polygon(det_obj_corners)
                 ## step 4 : computer the center distance between label and detection bounding-box in x, y, and z
-                
+                label_center = np.array([label.box.center_x,label.box.center_y,label.box.center_z])
+                det_center = np.array([detection[1],detection[2],detection[3]])
+                dist_x,dist_y,dist_z = np.sqrt((label_center-det_center)*(label_center-det_center))
                 ## step 5 : compute the intersection over union (IOU) between label and detection bounding-box
-                
+                intersection = det_poly.intersection(label_obj_poly)
+                overlap = intersection.area / label_obj_poly.area
                 ## step 6 : if IOU exceeds min_iou threshold, store [iou,dist_x, dist_y, dist_z] in matches_lab_det and increase the TP count
-                
+                if overlap > min_iou:
+                    matches_lab_det.append([overlap,dist_x,dist_y,dist_z]) 
+                    true_positives+=1
+                    false_positives-=1
+                    false_negatives-=1
             #######
             ####### ID_S4_EX1 END #######     
             
@@ -69,7 +90,6 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
             ious.append(best_match[0])
             center_devs.append(best_match[1:])
 
-
     ####### ID_S4_EX2 START #######     
     #######
     print("student task ID_S4_EX2")
@@ -77,13 +97,13 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
     # compute positives and negatives for precision/recall
     
     ## step 1 : compute the total number of positives present in the scene
-    all_positives = 0
+    # all_positives = 0
 
     ## step 2 : compute the number of false negatives
-    false_negatives = 0
+    # false_negatives = 0
 
     ## step 3 : compute the number of false positives
-    false_positives = 0
+    # false_positives = 0
     
     #######
     ####### ID_S4_EX2 END #######     
@@ -111,19 +131,28 @@ def compute_performance_stats(det_performance_all):
     print('student task ID_S4_EX3')
 
     ## step 1 : extract the total number of positives, true positives, false negatives and false positives
-    
+    positives = 0
+    tp = 0
+    fp = 0
+    fn = 0
+    for item in pos_negs:
+       positives+=item[0]
+       tp+=item[1]
+       fn+=item[2]
+       fp+=item[3]
     ## step 2 : compute precision
-    precision = 0.0
+    precision = tp/(tp+fp)
 
     ## step 3 : compute recall 
-    recall = 0.0
+    recall = tp/(tp+fn)
+    print(type(ious),np.array(ious).shape)
 
     #######    
     ####### ID_S4_EX3 END #######     
     print('precision = ' + str(precision) + ", recall = " + str(recall))   
 
     # serialize intersection-over-union and deviations in x,y,z
-    ious_all = [element for tupl in ious for element in tupl]
+    ious_all = [(int(100*element))/100 for tupl in ious for element in tupl]
     devs_x_all = []
     devs_y_all = []
     devs_z_all = []

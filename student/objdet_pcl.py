@@ -44,6 +44,8 @@ def show_pcl(pcl):
     # step 2 : create instance of open3d point-cloud class
     pcd = o3d.geometry.PointCloud()
     # step 3 : set points in pcd instance by converting the point-cloud into 3d vectors (using open3d function Vector3dVector)
+    # When encountered error : GLFW Error: GLX: Failed to create context: BadValue (integer parameter out of range for operation)
+    # sometime is due to nvidia diriver issue, reboot will solve it 
     pcd.points = o3d.utility.Vector3dVector(pcl[:,0:3])
     # step 4 : for the first frame, add the pcd instance to visualization using add_geometry; for all other frames, use update_geometry instead
     vis.add_geometry(pcd)
@@ -130,7 +132,7 @@ def bev_from_pcl(lidar_pcl, configs):
     lidar_pcl_cpy[:,1] = np.int_(lidar_pcl_cpy[:,1] * y_factor + 0.5*(configs.bev_width + 1))
     test = lidar_pcl_cpy[:,1]
     # step 4 : visualize point-cloud using the function show_pcl from a previous task
-    show_pcl(lidar_pcl_cpy)
+    # show_pcl(lidar_pcl_cpy)
     #######
     ####### ID_S2_EX1 END #######     
     
@@ -212,7 +214,7 @@ def bev_from_pcl(lidar_pcl, configs):
     test_map[:, :, 0] = density_map[:configs.bev_height, :configs.bev_width]  # r_map
     test_map[:, :, 1] = height_map[:configs.bev_height, :configs.bev_width]  # g_map
     test_map[:, :, 2] = intensity_map[:configs.bev_height, :configs.bev_width]  # b_map
-    view_bev_img(test_map, vis=True)
+    view_bev_img(test_map, vis=False)
 
     # expand dimension of bev_map before converting into a tensor
     s1, s2, s3 = bev_map.shape
@@ -220,6 +222,7 @@ def bev_from_pcl(lidar_pcl, configs):
     bev_maps[0] = bev_map
     bev_maps = torch.from_numpy(bev_maps)  # create tensor from birds-eye view
     input_bev_maps = bev_maps.to(configs.device, non_blocking=True).float()
+    print(np.amin(bev_maps.data.tolist()),np.amax(bev_maps.data.tolist()))
     return input_bev_maps
 
 def view_bev_img(bev_map,vis):
